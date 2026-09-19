@@ -1,0 +1,118 @@
+##############################################################################
+# render.yaml — Render Infrastructure-as-Code for Price Tracker Backend
+#
+# Docs: https://render.com/docs/yaml-spec
+#
+# Deploy by:
+#   1. Pushing this file to the repo root on GitHub.
+#   2. Going to Render Dashboard → New → Blueprint → connecting the repo.
+#   3. Setting the required environment variables listed below in the Render
+#      dashboard (they are intentionally marked sync:false so Render never
+#      overwrites secrets you set in the UI).
+##############################################################################
+
+services:
+  - type: web
+    name: price-tracker-backend
+    runtime: node
+    region: oregon          # Cheapest free-tier region; change to match your Supabase region
+    plan: free
+
+    # -----------------------------------------------------------------
+    # Node version — pin to match local dev (engines.node in package.json)
+    # -----------------------------------------------------------------
+    env: node
+    # Render uses the NODE_VERSION env var to select the Node runtime.
+    # We also set it explicitly below in envVars for clarity.
+
+    # Working directory (Render clones the whole repo; we cd into backend)
+    rootDir: backend
+
+    # -----------------------------------------------------------------
+    # Build command
+    # Order:
+    #   1. npm ci           — reproducible, lock-file install (no devDeps audit noise)
+    #   2. npm run build    — tsc → dist/
+    #   3. npx playwright install chromium --with-deps
+    #                       — downloads Chromium binary + all system-level
+    #                         library dependencies (libglib, libnss, libatk,
+    #                         libcups, libdrm, libxcomposite, etc.) that are
+    #                         absent from Render's base Ubuntu image by default.
+    #                         --with-deps is REQUIRED; omitting it causes
+    #                         "Host system is missing dependencies" at runtime.
+    # -----------------------------------------------------------------
+    buildCommand: "npm ci && npm run build && npx playwright install chromium --with-deps"
+
+    # -----------------------------------------------------------------
+    # Start command — runs the compiled JS, not tsx, so no devDeps at runtime.
+    # PORT is injected by Render automatically; env.ts reads process.env.PORT.
+    # -----------------------------------------------------------------
+    startCommand: "node dist/index.js"
+
+    # -----------------------------------------------------------------
+    # Health check — Render uses this to determine if a deploy succeeded
+    # and to route traffic only after the service is healthy.
+    # /health is also the keep-alive ping target for cron-job.org.
+    # -----------------------------------------------------------------
+    healthCheckPath: /health
+
+    # -----------------------------------------------------------------
+    # Environment Variables
+    #
+    # RULE: Never put real secret values in this file. This file is
+    # committed to Git. All secrets are set in the Render dashboard and
+    # marked sync:false so they survive re-deploys without being overwritten.
+    #
+    # sync:false  → Render will NOT overwrite this value on re-deploy;
+    #               the value lives exclusively in the dashboard.
+    # sync:true   → Render sets/updates the value from this file on every deploy.
+    #               Use only for non-secret config that should track the repo.
+    # -----------------------------------------------------------------
+    envVars:
+      # ---- Node runtime ----
+      - key: NODE_VERSION
+        value: "22"           # Matches local dev; Render selects the closest LTS
+
+      - key: NODE_ENV
+        value: production
+
+      # ---- Server config ----
+      # PORT is injected by Render automatically. We do not set it here.
+      # env.ts reads process.env.PORT with a fallback of 4000.
+
+      - key: LOG_LEVEL
+        value: info
+
+      # ---- CORS ----
+      # Comma-separated list of allowed origins.
+      # Add your Vercel URL here after the first deploy.
+      # Example: https://price-tracker-abc123.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false           # Set in Render dashboard: your Vercel frontend URL
+
+      # ---- Supabase ----
+      - key: SUPABASE_URL
+        sync: false           # Set in Render dashboard: https://your-project.supabase.co
+
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false           # Set in Render dashboard: service_role JWT (NOT anon key)
+
+      # ---- Cron authentication ----
+      - key: CRON_SECRET
+        sync: false           # Set in Render dashboard: generate with `openssl rand -hex 32`
+
+      # ---- Scraper config ----
+      - key: HEADLESS
+        value: "true"         # Always true in production; headed mode is local-only
+
+      - key: STORE_BASE_URL
+        value: "https://demo.inelabteamdev.com"
+
+      - key: MAX_SCRAPE_ATTEMPTS
+        value: "3"
+
+      - key: CATALOG_CACHE_TTL_MS
+        value: "600000"       # 10 minutes
+
+      - key: STALE_PENDING_MS
+        value: "600000"       # 10 minutes; marks orphaned pending logs as abandoned

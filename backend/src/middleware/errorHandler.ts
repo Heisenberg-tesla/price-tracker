@@ -14,15 +14,18 @@ export const errorHandler: ErrorRequestHandler = (
 
   let statusCode = 500;
   let message = 'Internal Server Error';
+  let code: string | undefined = undefined;
   let details: unknown = undefined;
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
     message = err.message;
+    code = err.code;
     details = err.details;
   } else if (err.name === 'SyntaxError' && 'body' in err) {
     statusCode = 400;
     message = 'Malformed JSON request body';
+    code = 'BAD_REQUEST';
   }
 
   logger.error(
@@ -36,6 +39,7 @@ export const errorHandler: ErrorRequestHandler = (
       url: req.originalUrl,
       method: req.method,
       statusCode,
+      code,
     },
     `Request error occurred: ${err.message}`,
   );
@@ -43,6 +47,7 @@ export const errorHandler: ErrorRequestHandler = (
   const responsePayload: ApiErrorResponse = {
     error: {
       message,
+      code,
       correlationId,
       details: env.NODE_ENV !== 'production' ? (details ?? err.stack) : details,
     },

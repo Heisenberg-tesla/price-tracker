@@ -1,7 +1,12 @@
-/**
- * Database layer stub
- * Persistence layer connection and query client will reside here.
- */
+import { isDbConnected, getSupabaseClient, supabase } from './client';
+import * as repo from './repository';
+
 export const db = {
-  isConnected: (): boolean => false,
+  isConnected: isDbConnected,
+  getClient: getSupabaseClient,
+  client: supabase,
+  ...repo,
 };
+
+export { isDbConnected, getSupabaseClient, supabase };
+export * from './repository';

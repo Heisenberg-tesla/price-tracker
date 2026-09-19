@@ -18,6 +18,48 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   CORS_ORIGIN: z.string().min(1, 'CORS_ORIGIN must not be empty').default('http://localhost:5173'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL (e.g. https://your-project.supabase.co)'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY must not be empty'),
+  STALE_PENDING_MS: z
+    .string()
+    .default('600000')
+    .transform((val) => {
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error(`STALE_PENDING_MS must be a positive integer, received "${val}"`);
+      }
+      return parsed;
+    }),
+  HEADLESS: z
+    .string()
+    .default('true')
+    .transform((val) => val.toLowerCase() !== 'false'),
+  STORE_BASE_URL: z
+    .string()
+    .url('STORE_BASE_URL must be a valid URL')
+    .default('https://demo.inelabteamdev.com'),
+  CATALOG_CACHE_TTL_MS: z
+    .string()
+    .default('600000')
+    .transform((val) => {
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error(`CATALOG_CACHE_TTL_MS must be a positive integer, received "${val}"`);
+      }
+      return parsed;
+    }),
+  MAX_SCRAPE_ATTEMPTS: z
+    .string()
+    .default('3')
+    .transform((val) => {
+      const parsed = parseInt(val, 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error(`MAX_SCRAPE_ATTEMPTS must be a positive integer, received "${val}"`);
+      }
+      return parsed;
+    }),
+  ALLOWED_ORIGINS: z.string().default('http://localhost:5173'),
+  CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters long'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

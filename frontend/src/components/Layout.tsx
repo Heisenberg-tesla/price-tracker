@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { Activity, LayoutDashboard, ShieldCheck, Tag } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchHealth } from '../api/health';
-import { StatusBadge } from './StatusBadge';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -67,7 +66,30 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 border border-slate-800 rounded-lg px-3 py-1.5 bg-slate-900/50">
               <Activity className="w-3.5 h-3.5 text-slate-500" />
               <span>API Status:</span>
-              <StatusBadge status={getSystemStatus()} />
+              <span
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${
+                  getSystemStatus() === 'ok'
+                    ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/60'
+                    : getSystemStatus() === 'loading'
+                      ? 'bg-slate-800 text-slate-400 border border-slate-700'
+                      : 'bg-rose-950/80 text-rose-400 border border-rose-800/60'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    getSystemStatus() === 'ok'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : getSystemStatus() === 'loading'
+                        ? 'bg-slate-400'
+                        : 'bg-rose-400'
+                  }`}
+                />
+                {getSystemStatus() === 'ok'
+                  ? 'Online'
+                  : getSystemStatus() === 'loading'
+                    ? 'Checking…'
+                    : 'Degraded'}
+              </span>
             </div>
 
             <div className="flex items-center gap-2 text-xs font-mono text-slate-500">

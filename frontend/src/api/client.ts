@@ -11,13 +11,21 @@ export interface RequestOptions extends RequestInit {
 
 export class ApiClientError extends Error implements ApiError {
   public statusCode: number;
+  public code?: string;
   public correlationId?: string;
   public details?: unknown;
 
-  constructor(message: string, statusCode: number, correlationId?: string, details?: unknown) {
+  constructor(
+    message: string,
+    statusCode: number,
+    code?: string,
+    correlationId?: string,
+    details?: unknown,
+  ) {
     super(message);
     this.name = 'ApiClientError';
     this.statusCode = statusCode;
+    this.code = code;
     this.correlationId = correlationId;
     this.details = details;
   }
@@ -72,17 +80,23 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
 
   if (!response.ok) {
     let errorMessage = `API request failed with status ${response.status}`;
+    let code: string | undefined = undefined;
     let details: unknown = undefined;
 
     if (responseData && typeof responseData === 'object') {
-      const errObj = responseData as { error?: { message?: string; details?: unknown } };
+      const errObj = responseData as {
+        error?: { code?: string; message?: string; details?: unknown };
+      };
       if (errObj.error?.message) {
         errorMessage = errObj.error.message;
+      }
+      if (errObj.error?.code) {
+        code = errObj.error.code;
       }
       details = errObj.error?.details;
     }
 
-    throw new ApiClientError(errorMessage, response.status, correlationId, details);
+    throw new ApiClientError(errorMessage, response.status, code, correlationId, details);
   }
 
   return responseData as T;
@@ -96,6 +110,13 @@ export const api = {
     return apiClient<T>(endpoint, {
       ...options,
       method: 'POST',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  },
+  patch<T>(endpoint: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return apiClient<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   },

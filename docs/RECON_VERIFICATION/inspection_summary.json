@@ -1,0 +1,116 @@
+{
+  "outerHTML": "<div class=\"price-main\"><span class=\"price-value\" aria-hidden=\"true\" style=\"display: none;\">₹10,115</span><span class=\"mr-k2\" style=\"text-decoration: line-through; opacity: 0.55; margin-right: 10px;\">₹17,721</span><div class=\"voxrnj6 pv-k2\" style=\"font-family: var(--serif); font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; opacity: 1;\"><span>₹​</span><span>1​</span><span>4​</span><span>,​</span><span>1​</span><span>7​</span><span>7</span></div><span class=\"bd-k2\" style=\"margin-left: 10px; color: rgb(47, 133, 90); font-weight: 600;\">20% off</span><span class=\"amount\" data-price=\"true\" aria-hidden=\"true\" style=\"display: none;\">₹11,999</span></div>",
+  "children": [
+    {
+      "index": 0,
+      "tagName": "SPAN",
+      "className": "price-value",
+      "id": "",
+      "ariaHidden": "true",
+      "display": "none",
+      "visibility": "visible",
+      "textDecoration": "none",
+      "textContent": "₹10,115",
+      "childSpans": [],
+      "dataset": {},
+      "isHoneypot": true,
+      "isStrikethroughMRP": false,
+      "isBadge": false
+    },
+    {
+      "index": 1,
+      "tagName": "SPAN",
+      "className": "mr-k2",
+      "id": "",
+      "ariaHidden": null,
+      "display": "block",
+      "visibility": "visible",
+      "textDecoration": "line-through",
+      "textContent": "₹17,721",
+      "childSpans": [],
+      "dataset": {},
+      "isHoneypot": false,
+      "isStrikethroughMRP": true,
+      "isBadge": false
+    },
+    {
+      "index": 2,
+      "tagName": "DIV",
+      "className": "voxrnj6 pv-k2",
+      "id": "",
+      "ariaHidden": null,
+      "display": "block",
+      "visibility": "visible",
+      "textDecoration": "none",
+      "textContent": "₹​1​4​,​1​7​7",
+      "childSpans": [
+        {
+          "text": "₹​",
+          "className": ""
+        },
+        {
+          "text": "1​",
+          "className": ""
+        },
+        {
+          "text": "4​",
+          "className": ""
+        },
+        {
+          "text": ",​",
+          "className": ""
+        },
+        {
+          "text": "1​",
+          "className": ""
+        },
+        {
+          "text": "7​",
+          "className": ""
+        },
+        {
+          "text": "7",
+          "className": ""
+        }
+      ],
+      "dataset": {},
+      "isHoneypot": false,
+      "isStrikethroughMRP": false,
+      "isBadge": false
+    },
+    {
+      "index": 3,
+      "tagName": "SPAN",
+      "className": "bd-k2",
+      "id": "",
+      "ariaHidden": null,
+      "display": "block",
+      "visibility": "visible",
+      "textDecoration": "none",
+      "textContent": "20% off",
+      "childSpans": [],
+      "dataset": {},
+      "isHoneypot": false,
+      "isStrikethroughMRP": false,
+      "isBadge": true
+    },
+    {
+      "index": 4,
+      "tagName": "SPAN",
+      "className": "amount",
+      "id": "",
+      "ariaHidden": "true",
+      "display": "none",
+      "visibility": "visible",
+      "textDecoration": "none",
+      "textContent": "₹11,999",
+      "childSpans": [],
+      "dataset": {
+        "price": "true"
+      },
+      "isHoneypot": true,
+      "isStrikethroughMRP": false,
+      "isBadge": false
+    }
+  ]
+}

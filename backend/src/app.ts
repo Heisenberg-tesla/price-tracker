@@ -11,12 +11,29 @@ export function createApp(): Express {
   const app = express();
 
   // Security and CORS
+  const allowedOrigins = (env.ALLOWED_ORIGINS || env.CORS_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+          return callback(null, true);
+        }
+        return callback(new Error(`Origin "${origin}" is not allowed by CORS`));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'x-correlation-id', 'x-request-id'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'x-correlation-id',
+        'x-request-id',
+        'x-cron-secret',
+      ],
     }),
   );
 

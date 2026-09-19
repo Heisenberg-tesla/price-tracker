@@ -7,27 +7,38 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "scrape": "tsx src/scripts/runScrape.ts",
+    "scrape:headed": "tsx src/scripts/headedScrape.ts",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.0",
+    "p-limit": "^7.3.3",
     "pino": "^9.6.0",
     "pino-http": "^10.4.0",
+    "playwright": "^1.63.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/node": "^20.17.19",
+    "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^8.24.0",
     "@typescript-eslint/parser": "^8.24.0",
     "eslint": "^9.20.1",
     "prettier": "^3.5.1",
+    "supertest": "^7.2.2",
     "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.9"
   },
   "engines": {
     "node": ">=20.0.0"

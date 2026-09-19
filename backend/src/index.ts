@@ -1,19 +1,94 @@
+import { Server } from 'http';
+import pLimit from 'p-limit';
 import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './lib/logger';
+import { reconcileStalePendingLogs, getCatchupProducts } from './db';
+import { scrapeProduct } from './scraper/scrapeProduct';
 
 const app = createApp();
+let server: Server;
 
-const server = app.listen(env.PORT, () => {
-  logger.info(
-    {
-      port: env.PORT,
-      env: env.NODE_ENV,
-      pid: process.pid,
-    },
-    `Price Tracker backend server listening on http://localhost:${env.PORT}`,
-  );
-});
+async function runBootCatchupSafetyNet(): Promise<void> {
+  try {
+    const overdueProducts = await getCatchupProducts();
+    if (overdueProducts.length === 0) {
+      logger.info('Boot catch-up safety net: all active tracked products are within 2x interval');
+      return;
+    }
+
+    logger.info(
+      {
+        count: overdueProducts.length,
+        productIds: overdueProducts.map((p) => p.id),
+      },
+      'Boot catch-up safety net: found overdue products (> 2x interval). Running recovery scrape...',
+    );
+
+    const limit = pLimit(2);
+    for (const product of overdueProducts) {
+      void limit(async () => {
+        try {
+          await scrapeProduct(product, { triggerSource: 'catchup' });
+          logger.info({ productId: product.id }, 'Boot catch-up scrape completed successfully');
+        } catch (err: unknown) {
+          logger.error(
+            { productId: product.id, err: err instanceof Error ? err.message : String(err) },
+            'Boot catch-up scrape failed for product',
+          );
+        }
+      });
+    }
+  } catch (err: unknown) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      'Boot catch-up check could not evaluate products; proceeding without recovery sweep',
+    );
+  }
+}
+
+async function startServer(): Promise<void> {
+  // 1. Run boot-time stale pending sweep to recover from prior crashes or cold-start kills
+  try {
+    const sweepResult = await reconcileStalePendingLogs();
+    if (sweepResult.reconciledCount > 0) {
+      logger.info(
+        { reconciledCount: sweepResult.reconciledCount, reconciledIds: sweepResult.reconciledIds },
+        'Boot-time reconciliation marked stale pending scrape logs as abandoned',
+      );
+    } else {
+      logger.info('Boot-time reconciliation completed: no stale pending scrape logs found');
+    }
+  } catch (err: unknown) {
+    logger.warn(
+      { err: err instanceof Error ? err.message : String(err) },
+      'Boot-time pending log reconciliation could not reach database; proceeding with startup',
+    );
+  }
+
+  // 2. Start listening with generous server-side timeouts for Render cold starts & long scrapes
+  server = app.listen(env.PORT, () => {
+    logger.info(
+      {
+        port: env.PORT,
+        env: env.NODE_ENV,
+        pid: process.pid,
+      },
+      `Price Tracker backend server listening on http://localhost:${env.PORT}`,
+    );
+
+    // 3. Trigger Catch-Up Safety Net: if any product has not been scraped in > 2x its interval,
+    // execute a catch-up scrape once in the background with trigger_source='catchup'
+    void runBootCatchupSafetyNet();
+  });
+
+  // Generous timeouts: handle cold starts and extended Playwright scraping cycles
+  server.setTimeout(300000); // 5 minutes server socket timeout
+  server.keepAliveTimeout = 65000; // Ensure keep-alive > 60s proxy default (Render / Cloudflare)
+  server.headersTimeout = 66000;
+}
+
+void startServer();
 
 // Flag to prevent double shutdown
 let isShuttingDown = false;
