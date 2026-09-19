@@ -1,84 +1,132 @@
-# Price Tracker Monorepo
+# Price Tracker
 
-A robust, enterprise-grade e-commerce product price and inventory tracking application built for automated data ingestion, real-time price monitoring, and historical price visualization.
+A full-stack product price tracker that scrapes INE's mock store at https://demo.inelabteamdev.com using a hybrid approach of lightweight HTTP requests for catalog search and a headless Playwright browser for reliable price extraction.
+
+**Live URLs:**
+- **Frontend:** https://price-tracker-eta-self.vercel.app
+- **Backend:** https://price-tracker-backend-q11i.onrender.com
+- **GitHub:** https://github.com/Heisenberg-tesla/price-tracker
 
 ## Architecture
 
-This project is organized as a monorepo with two top-level components:
+```mermaid
+graph LR
+    A[Frontend<br>Vercel] -->|API Requests| B(Backend<br>Render)
+    B -->|SQL| C[(Supabase<br>PostgreSQL)]
+    B -->|Playwright| D[Mock Store]
+    E[cron-job.org<br>Primary Scheduler] -->|POST /api/cron/scrape-due| B
+    F[GitHub Actions<br>Backup Scheduler] -->|POST /api/cron/scrape-due| B
+```
 
-- **`/backend`**: Node.js 20 + Express + TypeScript service
-  - Strict TypeScript configuration with ESLint & Prettier
-  - Zod-based environment validation on boot with loud crash prevention
-  - Pino structured JSON logging with end-to-end `X-Correlation-ID` propagation
-  - Centralized error handling and unhandled rejection/exception management
-  - Graceful shutdown handling on `SIGTERM` and `SIGINT`
-  - Modular layered architecture (`routes`, `services`, `scraper`, `db`, `lib`, `types`, `config`)
-- **`/frontend`**: React 18 + Vite + TypeScript web application
-  - React Router for client-side routing
-  - TanStack Query (React Query) for state management and caching
-  - Recharts for historical price trend charting
-  - Tailwind CSS for modern, responsive styling
-  - Centralized typed API client reading from `VITE_API_BASE_URL`
+## Tech Stack
+- **Frontend:** React 18, Vite, TanStack Query, Recharts, Tailwind CSS (Hosted on Vercel)
+- **Backend:** Node.js 20, Express, TypeScript, Playwright (Hosted on Render)
+- **Database:** Supabase PostgreSQL
+- **Scheduling:** cron-job.org (Primary), GitHub Actions (Backup)
 
-For reconnaissance analysis of the target mock storefront (`https://demo.inelabteamdev.com/`), see [docs/RECON.md](docs/RECON.md).
-
-## Getting Started
+## Local Setup
 
 ### Prerequisites
+- Node.js 20+
+- A Supabase project (for the PostgreSQL database)
 
-- Node.js 20+ (recommended: Node 20 or 22)
-- npm 10+
-
-### Setup
-
-1. **Backend Setup**:
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Heisenberg-tesla/price-tracker.git
+   cd price-tracker
+   ```
+2. Install backend dependencies:
    ```bash
    cd backend
-   cp .env.example .env
    npm install
+   ```
+3. Install frontend dependencies:
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+### Configuration
+1. In the `backend/` directory, copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Fill in the required environment variables (see below).
+3. In your Supabase SQL editor, run the `backend/supabase/migrations/001_init.sql` script to create the necessary tables and policies.
+
+### Running the App
+1. Start the backend server:
+   ```bash
+   cd backend
    npm run dev
    ```
-   The backend will start at `http://localhost:4000` (configurable via `PORT`).
-   Verify health: `curl http://localhost:4000/health`
-
-2. **Frontend Setup**:
+2. Start the frontend server (in a new terminal):
    ```bash
    cd frontend
-   cp .env.example .env
-   npm install
    npm run dev
    ```
-   The frontend will start at `http://localhost:5173`.
+
+## Running Tests
+- **Backend:** `cd backend && npm test`
+- **Frontend:** `cd frontend && npm test`
+
+## Running Headed Scraper (Local Only)
+To visualize the scraping process in a real browser:
+```bash
+cd backend
+npm run scrape:headed -- --product=915
+```
+
+## Scraping Schedule
+The application relies on external schedulers calling `POST /api/cron/scrape-due`.
+- **Primary:** cron-job.org invokes the endpoint every 2 hours.
+- **Backup:** A GitHub Action workflow runs periodically.
+- **Per-product frequency:** Can be configured via the `scrapeIntervalMinutes` field (5 to 1440 minutes).
 
 ## Environment Variables
 
-### Backend (`/backend/.env`)
+### Backend (`backend/.env`)
 
-| Variable | Description | Default / Example |
-| :--- | :--- | :--- |
-| `PORT` | HTTP port the Express server listens on | `4000` |
-| `NODE_ENV` | Application environment (`development`, `production`, `test`) | `development` |
-| `CORS_ORIGIN` | Allowed CORS origin URL | `http://localhost:5173` |
-| `LOG_LEVEL` | Pino logging level (`fatal`, `error`, `warn`, `info`, `debug`, `trace`) | `info` |
+| Variable | Description |
+|---|---|
+| `PORT` | Server port (default: 4000) |
+| `NODE_ENV` | `development`, `test`, or `production` |
+| `LOG_LEVEL` | Pino log level (e.g., `info`, `debug`) |
+| `SUPABASE_URL` | Your Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role JWT for backend access |
+| `CRON_SECRET` | Secret key for cron authentication |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins |
+| `HEADLESS` | Set to `true` to run Playwright headlessly |
+| `STORE_BASE_URL` | `https://demo.inelabteamdev.com` |
+| `MAX_SCRAPE_ATTEMPTS` | Max retries per scrape (default: 3) |
+| `CATALOG_CACHE_TTL_MS` | TTL for the catalog cache (e.g., 600000) |
+| `STALE_PENDING_MS` | Timeout for pending scrapes (e.g., 600000) |
 
-### Frontend (`/frontend/.env`)
+### Frontend (`frontend/.env`)
 
-| Variable | Description | Default / Example |
-| :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | Base URL for the backend API | `http://localhost:4000/api` |
+| Variable | Description |
+|---|---|
+| `VITE_API_BASE_URL` | URL of the backend API (e.g., `http://localhost:4000`) |
 
-## Available Scripts
-
-### Backend
-- `npm run dev`: Starts development server with auto-reload using `tsx`.
-- `npm run build`: Compiles TypeScript to `dist/`.
-- `npm start`: Runs compiled JavaScript from `dist/index.js`.
-- `npm run lint`: Checks code with ESLint.
-- `npm run format`: Formats code with Prettier.
-
-### Frontend
-- `npm run dev`: Starts Vite local dev server with HMR.
-- `npm run build`: Compiles TypeScript and builds production assets to `dist/`.
-- `npm run preview`: Previews the production build locally.
-- `npm run lint`: Checks code with ESLint.
-- `npm run format`: Formats code with Prettier.
+## Project Structure
+```text
+price-tracker/
+├── backend/
+│   ├── src/
+│   │   ├── db/          # Supabase client & repository
+│   │   ├── routes/      # Express API routes
+│   │   ├── scraper/     # Playwright scraper logic
+│   │   └── scripts/     # CLI scripts (e.g., headedScrape.ts)
+│   ├── supabase/        # Database migrations
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/  # React components
+│   │   ├── pages/       # Dashboard and Product Details
+│   │   └── services/    # API client
+│   └── package.json
+├── docs/                # Project documentation
+├── render.yaml          # Render deployment config
+└── README.md
+```
