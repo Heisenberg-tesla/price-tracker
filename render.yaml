@@ -33,15 +33,10 @@ services:
     # Order:
     #   1. npm ci           — reproducible, lock-file install (no devDeps audit noise)
     #   2. npm run build    — tsc → dist/
-    #   3. npx playwright install chromium --with-deps
-    #                       — downloads Chromium binary + all system-level
-    #                         library dependencies (libglib, libnss, libatk,
-    #                         libcups, libdrm, libxcomposite, etc.) that are
-    #                         absent from Render's base Ubuntu image by default.
-    #                         --with-deps is REQUIRED; omitting it causes
-    #                         "Host system is missing dependencies" at runtime.
+    #   3. npx playwright install chromium
+    #                       — downloads Chromium binary
     # -----------------------------------------------------------------
-    buildCommand: "npm ci && npm run build && npx playwright install chromium --with-deps"
+    buildCommand: "npm ci && npm run build && npx playwright install chromium"
 
     # -----------------------------------------------------------------
     # Start command — runs the compiled JS, not tsx, so no devDeps at runtime.
@@ -116,3 +111,9 @@ services:
 
       - key: STALE_PENDING_MS
         value: "600000"       # 10 minutes; marks orphaned pending logs as abandoned
+
+      # ---- Playwright Config ----
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: "0"
+      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+        value: "0"

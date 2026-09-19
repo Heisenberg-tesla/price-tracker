@@ -189,6 +189,8 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
         '--disable-dev-shm-usage',
         // No GPU available in headless containers; avoids GPU init errors in logs.
         '--disable-gpu',
+        '--single-process',
+        '--no-zygote',
         '--disable-extensions',
         '--disable-component-extensions-with-background-pages',
         ...(options.devtools ? ['--auto-open-devtools-for-tabs'] : []),
