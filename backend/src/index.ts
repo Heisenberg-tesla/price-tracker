@@ -1,5 +1,5 @@
 import { Server } from 'http';
-import pLimit from 'p-limit';
+import { createConcurrencyLimiter } from './lib/concurrencyLimit';
 import { createApp } from './app';
 import { env } from './config/env';
 import { logger } from './lib/logger';
@@ -25,7 +25,7 @@ async function runBootCatchupSafetyNet(): Promise<void> {
       'Boot catch-up safety net: found overdue products (> 2x interval). Running recovery scrape...',
     );
 
-    const limit = pLimit(2);
+    const limit = createConcurrencyLimiter(2);
     for (const product of overdueProducts) {
       void limit(async () => {
         try {

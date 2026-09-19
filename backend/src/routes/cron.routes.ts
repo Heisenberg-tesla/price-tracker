@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import pLimit from 'p-limit';
+import { createConcurrencyLimiter } from '../lib/concurrencyLimit';
 import { env } from '../config/env';
 import {
   reconcileStalePendingLogs,
@@ -102,7 +102,7 @@ cronRouter.post('/scrape-due', async (req: Request, res: Response, next: NextFun
       }
 
       // 3. Scrape with bounded concurrency (p-limit: 2) and jittered delay
-      const limit = pLimit(2);
+      const limit = createConcurrencyLimiter(2);
 
       const scrapeTasks = dueProducts.map((product, index) =>
         limit(async () => {
