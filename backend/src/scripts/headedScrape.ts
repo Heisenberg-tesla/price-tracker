@@ -140,7 +140,7 @@ async function resolveProduct(arg: string, baseUrl: string): Promise<TrackedProd
           if (typeof details.category === 'string') category = details.category;
           if (typeof details.sku === 'string') sku = details.sku;
         }
-      } catch (err) {
+      } catch {
         console.warn(`${c.yellow}Could not fetch catalog metadata; using default name.${c.reset}`);
       }
     }

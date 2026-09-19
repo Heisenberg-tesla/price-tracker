@@ -128,6 +128,8 @@ describe('Browser Session Lifecycle & Isolated Attempt Scoping', () => {
         stockRaw: 'In Stock',
         nodeSummaries: [],
       })),
+      route: vi.fn(async () => {}),
+      unrouteAll: vi.fn(async () => {}),
     } as unknown as Page;
 
     const mockContext = {
