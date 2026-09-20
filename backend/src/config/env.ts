@@ -60,6 +60,18 @@ const envSchema = z.object({
     }),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173'),
   CRON_SECRET: z.string().min(16, 'CRON_SECRET must be at least 16 characters long'),
+  SCRAPE_TIMEOUT_MS: z
+    .string()
+    .optional()
+    .transform((val) => {
+      const isProd = process.env.NODE_ENV === 'production';
+      const defaultVal = isProd ? 45000 : 15000;
+      const parsed = parseInt(val || String(defaultVal), 10);
+      if (isNaN(parsed) || parsed <= 0) {
+        throw new Error(`SCRAPE_TIMEOUT_MS must be a positive integer, received "${val}"`);
+      }
+      return parsed;
+    }),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

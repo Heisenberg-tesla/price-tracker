@@ -158,6 +158,15 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
   const maxAttempts = options.maxAttempts || 3;
   const simulate = options.simulate || 'none';
 
+  const isProd = env.NODE_ENV === 'production';
+  const defaultScrapeTimeoutMs = isProd ? 45000 : 15000;
+  const timeoutScale = env.SCRAPE_TIMEOUT_MS / defaultScrapeTimeoutMs;
+
+  const navTimeout = (isProd ? 60000 : 15000) * timeoutScale;
+  const revealWaitTimeout = (isProd ? 30000 : 8000) * timeoutScale;
+  const priceSuccessTimeout = (isProd ? 45000 : 15000) * timeoutScale;
+  const clickRetryWait = (isProd ? 5000 : 600) * timeoutScale;
+
   let browser: Browser | null = null;
   let context: BrowserContext | null = null;
   let page: Page | null = null;
@@ -175,6 +184,17 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
   };
 
   try {
+    if (isProd) {
+      options.onStepProgress?.({
+        attempt,
+        maxAttempts,
+        phase: 'navigate',
+        detail: 'Waiting 5s for cold-start initialization in production...',
+        status: 'info',
+      });
+      await new Promise(r => setTimeout(r, 5000));
+    }
+
     // 1. Launch Chromium (headed or headless, with optional slowMo/devtools)
     const launchOptions: Parameters<typeof chromium.launch>[0] = {
       headless: isHeadless,
@@ -329,7 +349,7 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
 
     const titleLocator = page.locator('h1, .detail-title');
     try {
-      await titleLocator.first().waitFor({ state: 'visible', timeout: 15000 });
+      await titleLocator.first().waitFor({ state: 'visible', timeout: navTimeout });
     } catch {
       // Check if product genuinely not found on page
       const notFoundText = await page.locator('body').innerText().catch(() => '');
@@ -361,7 +381,7 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
 
     // 5. Locate price block for realistic hover interaction
     const priceBlock = page.locator('.price-block').first();
-    await priceBlock.waitFor({ state: 'visible', timeout: 8000 });
+    await priceBlock.waitFor({ state: 'visible', timeout: revealWaitTimeout });
 
     const box = await priceBlock.boundingBox();
     if (!box) {
@@ -396,7 +416,7 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
 
     // 7. Poll until reveal button disabled attribute clears
     const revealBtn = page.locator('button[aria-label="Reveal price"]').first();
-    await revealBtn.waitFor({ state: 'visible', timeout: 6000 });
+    await revealBtn.waitFor({ state: 'visible', timeout: revealWaitTimeout });
 
     let isEnabled = false;
     for (let poll = 0; poll < 25; poll++) {
@@ -443,7 +463,7 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
 
       // Check for terminal state (.price-success or .price-error)
       try {
-        await page.waitForSelector('.price-success, .price-error', { timeout: 3500 });
+        await page.waitForSelector('.price-success, .price-error', { timeout: priceSuccessTimeout });
         terminalStateReached = true;
         break;
       } catch {
@@ -451,7 +471,7 @@ export async function fetchPriceWithBrowser(options: FetchPriceOptions): Promise
           { clickAttempt },
           'No terminal price state reached after click (likely dropped by jitter), retrying...',
         );
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(clickRetryWait);
       }
     }
 
