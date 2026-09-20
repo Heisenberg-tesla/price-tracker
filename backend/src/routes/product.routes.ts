@@ -101,6 +101,9 @@ const logsQuerySchema = {
 // Routes
 // -----------------------------------------------------------------------------
 
+// Simple queue to prevent concurrent initial scrapes from overloading the server
+let initialScrapeQueue: Promise<void> = Promise.resolve();
+
 /**
  * POST /api/products
  * Creates a new tracked product record, immediately dispatches initial async scrape,
@@ -125,29 +128,41 @@ productsRouter.post(
         is_active: true,
       });
 
-      // Fire-and-forget initial scrape: never blocks response, never unhandled
-      void (async () => {
-        try {
-          logger.info(
-            { productId: created.id, triggerSource: 'initial' },
-            'Launching initial background scrape for new product',
-          );
-          await scrapeProduct(created, { triggerSource: 'initial' });
-        } catch (err: unknown) {
-          logger.error(
-            {
-              productId: created.id,
-              triggerSource: 'initial',
-              err: err instanceof Error ? err.message : String(err),
-            },
-            'Unhandled error caught during initial background scrape execution',
-          );
-        }
-      })();
+      let isCurrentlyRunning = false;
+
+      if (env.DISABLE_INITIAL_SCRAPE) {
+        logger.info(
+          { productId: created.id },
+          'DISABLE_INITIAL_SCRAPE is true; skipping initial background scrape',
+        );
+      } else {
+        isCurrentlyRunning = true;
+        // Queue the initial scrape to prevent simultaneous scrapes from overwhelming memory
+        initialScrapeQueue = initialScrapeQueue.then(async () => {
+          try {
+            logger.info(
+              { productId: created.id, triggerSource: 'initial' },
+              'Launching queued initial background scrape for new product',
+            );
+            await scrapeProduct(created, { triggerSource: 'initial' });
+          } catch (err: unknown) {
+            logger.error(
+              {
+                productId: created.id,
+                triggerSource: 'initial',
+                err: err instanceof Error ? err.message : String(err),
+              },
+              'Unhandled error caught during queued initial background scrape execution',
+            );
+          }
+          // 30-second delay between initial scrapes
+          await new Promise((resolve) => setTimeout(resolve, 30000));
+        });
+      }
 
       res.status(201).json({
         ...created,
-        isCurrentlyRunning: true,
+        isCurrentlyRunning,
         lastCompletedOutcome: null,
         lastScrapedAt: null,
         latestPriceCents: null,

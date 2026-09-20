@@ -72,6 +72,10 @@ const envSchema = z.object({
       }
       return parsed;
     }),
+  DISABLE_INITIAL_SCRAPE: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
